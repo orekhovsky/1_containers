@@ -1,0 +1,19 @@
+FROM nginx:alpine
+
+RUN apk add --no-cache gettext
+
+RUN adduser -D -g '' nginxuser && \
+    chown -R nginxuser:nginxuser /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx && \
+    mkdir -p /app/logs && \
+    chown -R nginxuser:nginxuser /app/logs
+
+COPY nginx.conf.template /etc/nginx/templates/nginx.conf.template
+COPY static /usr/share/nginx/html
+
+RUN chown -R nginxuser:nginxuser /usr/share/nginx/html
+
+EXPOSE 80
+
+USER nginxuser
+
+CMD ["/bin/sh", "-c", "envsubst '$$BACKEND_HOST $$BACKEND_PORT' < /etc/nginx/templates/nginx.conf.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"]
