@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: business
+  namespace: fraud-shield
+  labels:
+    app.kubernetes.io/name: fraud-shield
+    app.kubernetes.io/component: api
+    tier: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: business
+  template:
+    metadata:
+      labels:
+        app: business
+        app.kubernetes.io/name: fraud-shield
+        app.kubernetes.io/component: api
+        tier: frontend
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for PostgreSQL..."
+              until nc -z postgres 5432; do
+                echo "PostgreSQL not ready, waiting..."
+                sleep 3
+              done
+              echo "PostgreSQL is ready!"
+        - name: wait-for-rabbitmq
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for RabbitMQ..."
+              until nc -z rabbitmq 5672; do
+                echo "RabbitMQ not ready, waiting..."
+                sleep 3
+              done
+              echo "RabbitMQ is ready!"
+      containers:
+        - name: business
+          image: fraud-shield-business:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: fraud-shield-config
+            - secretRef:
+                name: fraud-shield-secret
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /docs # /health эндпоинта нет, выкручиваемся
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /docs # /health эндпоинта нет, выкручиваемся
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: business
+  namespace: fraud-shield
+  labels:
+    app.kubernetes.io/name: fraud-shield
+    app.kubernetes.io/component: api
+spec:
+  selector:
+    app: business
+  ports:
+    - port: 8000
+      targetPort: 8000
+      nodePort: 30080
+  type: NodePort
+

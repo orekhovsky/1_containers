@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fraud-shield-config
+  namespace: fraud-shield
+  labels:
+    app.kubernetes.io/name: fraud-shield
+    app.kubernetes.io/component: config
+data:
+  # PostgreSQL
+  POSTGRES_DB: "frauddb"
+  POSTGRES_USER: "fraud_user"
+  
+  # RabbitMQ
+  RABBIT_URL: "amqp://guest:guest@rabbitmq:5672/"
+  PREFETCH: "4"
+  
+  # S3/MinIO
+  S3_ENDPOINT: "http://minio:9000"
+  S3_BUCKET: "fraud-models"
+  
+  # Model artefacts paths in S3
+  GNN_MODEL_KEY: "edge_gnn_best_state_dict.pt"
+  CATBOOST_MODEL_KEY: "boosting_model.joblib"
+  LR_MODEL_KEY: "lr.pkl"
+  CC2IDX_KEY: "cc2idx.json"
+  NODE_SCALER_KEY: "node_scaler.pkl"
+  EDGE_SCALER_KEY: "edge_scaler.pkl"
+  PREPROC_KEY: "preprocessor.pkl"
+  NODE_EMBEDDINGS_KEY: "node_embeddings.npy"
+  EDGE_MLP_KEY: "edge_mlp_state.pt"
+  
+  # Misc
+  HIST_WINDOW: "100"
+

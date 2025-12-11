@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prediction
+  namespace: fraud-shield
+  labels:
+    app.kubernetes.io/name: fraud-shield
+    app.kubernetes.io/component: ml
+    tier: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prediction
+  template:
+    metadata:
+      labels:
+        app: prediction
+        app.kubernetes.io/name: fraud-shield
+        app.kubernetes.io/component: ml
+        tier: backend
+    spec:
+      initContainers:
+        # Init-контейнер: ждём RabbitMQ и MinIO
+        - name: wait-for-deps
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for RabbitMQ..."
+              until nc -z rabbitmq 5672; do
+                echo "RabbitMQ not ready, waiting..."
+                sleep 3
+              done
+              echo "RabbitMQ is ready!"
+              
+              echo "Waiting for MinIO..."
+              until wget -q --spider http://minio:9000/minio/health/live; do
+                echo "MinIO not ready, waiting..."
+                sleep 3
+              done
+              echo "MinIO is ready!"
+      containers:
+        - name: prediction
+          image: fraud-shield-prediction:latest
+          imagePullPolicy: Never
+          envFrom:
+            - configMapRef:
+                name: fraud-shield-config
+            - secretRef:
+                name: fraud-shield-secret
+
+
